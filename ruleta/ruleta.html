@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteo Bodegón de Pacheco - Día de las Madres</title>
+    <!-- Importamos fuentes elegantes -->
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <!-- Iconos FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primario: #d81b60;
+            --secundario: #fce4ec;
+            --dorado: #ffca28;
+            --oscuro: #4a0e0e;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* Contenedor Principal */
+        .card {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 40px;
+            box-shadow: 0 20px 50px rgba(216, 27, 96, 0.2);
+            text-align: center;
+            max-width: 600px;
+            width: 95%;
+            position: relative;
+            border: 8px solid var(--secundario);
+        }
+
+        /* Cabecera */
+        .header h1 {
+            font-family: 'Dancing Script', cursive;
+            color: var(--primario);
+            font-size: 2.5rem;
+            margin: 0;
+        }
+
+        .header h2 {
+            font-size: 1rem;
+            color: var(--oscuro);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .header i {
+            color: var(--primario);
+            margin: 0 10px;
+        }
+
+        /* Ruleta */
+        .roulette-container {
+            position: relative;
+            margin: 30px auto;
+            width: 450px;
+            height: 450px;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 12px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Puntero con Icono */
+        .pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            color: var(--dorado);
+            font-size: 3rem;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
+        }
+
+        /* Botón de Giro */
+        .btn-spin {
+            background: var(--primario);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 8px 0 #ad1457;
+            text-transform: uppercase;
+        }
+
+        .btn-spin:hover {
+            transform: translateY(-2px);
+            background: #ad1457;
+        }
+
+        .btn-spin:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #ad1457;
+        }
+
+        .btn-spin:disabled {
+            background: #ccc;
+            box-shadow: 0 4px 0 #999;
+            cursor: not-allowed;
+        }
+
+        /* Resultado */
+        .result-box {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 20px;
+            background: var(--secundario);
+            border: 2px dashed var(--primario);
+        }
+
+        #winner {
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: var(--primario);
+            margin: 0;
+            line-height: 1;
+        }
+
+        /* Animación de Confeti */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            z-index: 1000;
+            top: -10px;
+            border-radius: 50%;
+        }
+
+        @media (max-width: 500px) {
+            .roulette-container { width: 300px; height: 300px; }
+            .card { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="header">
+            <h1>Feliz Día Mamá <i class="fas fa-heart"></i></h1>
+            <h2>Bodegón de Pacheco</h2>
+        </div>
+
+        <div class="roulette-container">
+            <div class="pointer">
+                <i class="fas fa-map-marker-alt"></i>
+            </div>
+            <canvas id="canvas" width="600" height="600"></canvas>
+        </div>
+
+        <button class="btn-spin" id="spinBtn">
+            <i class="fas fa-sync-alt"></i> Girar Ruleta
+        </button>
+
+        <div class="result-box">
+            <span style="font-size: 0.9rem; color: #880e4f; font-weight: 600;">
+                <i class="fas fa-star"></i> NÚMERO GANADOR <i class="fas fa-star"></i>
+            </span>
+            <p id="winner">--</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const winnerDisplay = document.getElementById('winner');
+
+        const numSegments = 100;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2 - 10;
+
+        let currentAngle = 0;
+        let isSpinning = false;
+
+        function draw() {
+            const sliceAngle = (2 * Math.PI) / numSegments;
+
+            for (let i = 0; i < numSegments; i++) {
+                const angle = currentAngle + i * sliceAngle;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, angle, angle + sliceAngle);
+                
+                // Colores alternos con degradado
+                ctx.fillStyle = i % 2 === 0 ? '#d81b60' : '#ffffff';
+                ctx.fill();
+                
+                // Bordes de los segmentos
+                ctx.strokeStyle = 'rgba(216, 27, 96, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Números
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(angle + sliceAngle / 2);
+                ctx.textAlign = "right";
+                ctx.fillStyle = i % 2 === 0 ? "#ffffff" : "#d81b60";
+                ctx.font = "bold 12px Poppins";
+                ctx.fillText(i + 1, radius - 20, 5);
+                ctx.restore();
+            }
+
+            // Decoración Central (Logo o Icono)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.strokeStyle = '#d81b60';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+
+            ctx.fillStyle = '#d81b60';
+            ctx.font = "bold 30px FontAwesome";
+            ctx.textAlign = "center";
+            ctx.fillText("\uf004", centerX, centerY + 10); // Icono de corazón
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = ['#d81b60', '#ffca28', '#fce4ec', '#ff4081'][Math.floor(Math.random() * 4)];
+                confetti.style.transform = `scale(${Math.random()})`;
+                document.body.appendChild(confetti);
+
+                const animation = confetti.animate([
+                    { transform: `translate3d(0,0,0)`, opacity: 1 },
+                    { transform: `translate3d(${(Math.random() - 0.5) * 200}px, 100vh, 0)`, opacity: 0 }
+                ], {
+                    duration: Math.random() * 3000 + 2000,
+                    easing: 'cubic-bezier(0,1,1,1)'
+                });
+
+                animation.onfinish = () => confetti.remove();
+            }
+        }
+
+        function spin() {
+            if (isSpinning) return;
+            isSpinning = true;
+            spinBtn.disabled = true;
+            winnerDisplay.innerText = "??";
+            winnerDisplay.style.transform = "scale(1)";
+
+            const startVelocity = Math.random() * 25 + 35;
+            let velocity = startVelocity;
+            const friction = 0.99; 
+
+            function animate() {
+                if (velocity < 0.01) {
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    calculateWinner();
+                    return;
+                }
+
+                currentAngle += velocity * (Math.PI / 180);
+                velocity *= friction;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                draw();
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        function calculateWinner() {
+            const sliceAngle = (2 * Math.PI) / numSegments;
+            let normalizedAngle = (1.5 * Math.PI - currentAngle) % (2 * Math.PI);
+            if (normalizedAngle < 0) normalizedAngle += 2 * Math.PI;
+
+            const index = Math.floor(normalizedAngle / sliceAngle);
+            const winner = (index % numSegments) + 1;
+
+            winnerDisplay.innerText = winner;
+            winnerDisplay.style.transform = "scale(1.3)";
+            winnerDisplay.style.transition = "0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+            createConfetti();
+        }
+
+        spinBtn.addEventListener('click', spin);
+        draw();
+    </script>
+</body>
+</html>
